@@ -214,6 +214,15 @@ void XiaomiLightbarHub::handle_received_packet_() {
   slot->package_id = pkt_id;
 
   remote->handle_command(data[13], data[14]);
+
+  // If a light is configured with the same serial as the remote, the physical
+  // remote also drove the bar. Mirror its effect locally so HA's view of the
+  // light stays in sync without us re-sending any radio command.
+  for (auto *l : this->lights_) {
+    if (l->get_serial() == serial) {
+      l->mirror_remote_command(data[13], data[14]);
+    }
+  }
 }
 
 }  // namespace xiaomi_lightbar

@@ -33,6 +33,45 @@ void XiaomiLightbarLight::send_pair() {
   this->hub_->send_command(this->serial_, CMD_RESET, 0x00);
 }
 
+void XiaomiLightbarLight::mirror_remote_command(uint8_t cmd, uint8_t /*opts*/) {
+  switch (cmd) {
+    case CMD_ON_OFF:
+      this->current_on_ = !this->current_on_;
+      break;
+    case CMD_BRIGHTER:
+      if (this->current_brightness_ < 15) this->current_brightness_++;
+      break;
+    case CMD_DIMMER:
+      if (this->current_brightness_ > 0) this->current_brightness_--;
+      break;
+    case CMD_WARMER:
+      if (this->current_color_temp_ < 15) this->current_color_temp_++;
+      break;
+    case CMD_COOLER:
+      if (this->current_color_temp_ > 0) this->current_color_temp_--;
+      break;
+    default:
+      return;
+  }
+  this->initialized_ = true;
+
+  if (this->state_ != nullptr) {
+    // Push the new state to HA without re-triggering write_state. We set both
+    // current_values (used by the diff in write_state) and remote_values (what
+    // publish_state reports to HA) directly.
+    float bf = this->current_brightness_ / 15.0f;
+    float mireds = 153.0f + (370.0f - 153.0f) *
+                                (this->current_color_temp_ / 15.0f);
+    this->state_->current_values.set_state(this->current_on_);
+    this->state_->current_values.set_brightness(bf);
+    this->state_->current_values.set_color_temperature(mireds);
+    this->state_->current_values.set_color_mode(
+        light::ColorMode::COLOR_TEMPERATURE);
+    this->state_->remote_values = this->state_->current_values;
+    this->state_->publish_state();
+  }
+}
+
 void XiaomiLightbarLight::apply_brightness_(uint8_t target) {
   if (target > 15)
     target = 15;
