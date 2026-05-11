@@ -27,7 +27,7 @@ class XiaomiLightbarHub : public Component,
                           public spi::SPIDevice<spi::BIT_ORDER_MSB_FIRST,
                                                 spi::CLOCK_POLARITY_LOW,
                                                 spi::CLOCK_PHASE_LEADING,
-                                                spi::DATA_RATE_8MHZ> {
+                                                spi::DATA_RATE_4MHZ> {
  public:
   void set_ce_pin(GPIOPin *pin) { ce_pin_ = pin; }
 

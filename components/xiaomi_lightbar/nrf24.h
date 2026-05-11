@@ -35,6 +35,17 @@ class NRF24 {
   // Read one payload (always reads `payload_size_` bytes from RX FIFO).
   void read_payload(uint8_t *buf, size_t len);
 
+  // Diagnostics captured during setup() so that dump_config() can print them
+  // (setup-time ESP_LOGE happens before the API logger is up).
+  struct Diag {
+    bool ran{false};
+    uint8_t status{0xAB};
+    uint8_t rf_ch_readback{0xAB};
+    uint8_t config_readback{0xAB};
+    uint8_t setup_aw_readback{0xAB};
+  };
+  const Diag &diag() const { return diag_; }
+
  private:
   enum : uint8_t {
     CMD_R_REGISTER = 0x00,
@@ -73,6 +84,7 @@ class NRF24 {
   GPIOPin *ce_pin_{nullptr};
   SpiTransfer spi_transfer_;
   static constexpr uint8_t payload_size_ = 17;
+  Diag diag_;
 };
 
 }  // namespace xiaomi_lightbar

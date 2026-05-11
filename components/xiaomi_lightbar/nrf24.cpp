@@ -86,10 +86,21 @@ bool NRF24::setup() {
   this->command(CMD_FLUSH_RX);
   this->command(CMD_FLUSH_TX);
 
-  // Sanity: read RF_CH back
-  uint8_t ch = this->read_register(REG_RF_CH);
-  if (ch != 68) {
-    ESP_LOGE(TAG, "nRF24 not responding (RF_CH read-back %u)", ch);
+  // Sanity readbacks. Stash them in diag_ so dump_config() can print them
+  // even when this code path runs before the API logger is up.
+  this->diag_.ran = true;
+  this->diag_.status = this->status();
+  this->diag_.rf_ch_readback = this->read_register(REG_RF_CH);
+  this->diag_.config_readback = this->read_register(REG_CONFIG);
+  this->diag_.setup_aw_readback = this->read_register(REG_SETUP_AW);
+
+  ESP_LOGCONFIG(TAG, "nRF24 readbacks: STATUS=0x%02X RF_CH=%u CONFIG=0x%02X SETUP_AW=0x%02X",
+                this->diag_.status, this->diag_.rf_ch_readback,
+                this->diag_.config_readback, this->diag_.setup_aw_readback);
+
+  if (this->diag_.rf_ch_readback != 68) {
+    ESP_LOGE(TAG, "nRF24 not responding (RF_CH read-back %u)",
+             this->diag_.rf_ch_readback);
     return false;
   }
 

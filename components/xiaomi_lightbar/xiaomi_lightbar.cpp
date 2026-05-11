@@ -44,6 +44,32 @@ void XiaomiLightbarHub::dump_config() {
   LOG_PIN("  CE pin: ", this->ce_pin_);
   ESP_LOGCONFIG(TAG, "  Lights: %u", (unsigned) this->lights_.size());
   ESP_LOGCONFIG(TAG, "  Remotes: %u", (unsigned) this->remotes_.size());
+
+  const auto &d = this->radio_.diag();
+  if (!d.ran) {
+    ESP_LOGCONFIG(TAG, "  nRF24: setup() never ran (check power / SPI bus)");
+  } else {
+    ESP_LOGCONFIG(TAG,
+                  "  nRF24: STATUS=0x%02X RF_CH=%u (want 68) CONFIG=0x%02X "
+                  "SETUP_AW=0x%02X (want 0x03)",
+                  d.status, d.rf_ch_readback, d.config_readback,
+                  d.setup_aw_readback);
+    if (d.rf_ch_readback == 0x00 && d.config_readback == 0x00 &&
+        d.setup_aw_readback == 0x00) {
+      ESP_LOGCONFIG(TAG,
+                    "  → all-zero readback: MISO not returning data. "
+                    "Check VCC=3V3, MISO wiring, and add a 10 uF cap across "
+                    "the nRF24 VCC/GND.");
+    } else if (d.rf_ch_readback == 0xFF && d.config_readback == 0xFF) {
+      ESP_LOGCONFIG(TAG,
+                    "  → all-0xFF readback: MISO floating. "
+                    "Check MISO pin (GPIO20 for XIAO ESP32-C6) and CSN.");
+    } else if (d.rf_ch_readback != 68) {
+      ESP_LOGCONFIG(TAG,
+                    "  → unexpected RF_CH readback: SPI is talking but "
+                    "garbled — try shorter wires or lower SPI clock.");
+    }
+  }
 }
 
 void XiaomiLightbarHub::loop() {
