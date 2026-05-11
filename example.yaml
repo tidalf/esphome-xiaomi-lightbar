@@ -1,0 +1,70 @@
+# Example ESPHome config for one ESP32 + one nRF24L01 + one Xiaomi light bar.
+# Wire-up (matches the original lightbar2mqtt defaults):
+#   nRF24 VCC  -> ESP32 3V3
+#   nRF24 GND  -> ESP32 GND
+#   nRF24 CE   -> GPIO4
+#   nRF24 CSN  -> GPIO5
+#   nRF24 SCK  -> GPIO18
+#   nRF24 MOSI -> GPIO23
+#   nRF24 MISO -> GPIO19
+
+esphome:
+  name: lightbar
+
+esp32:
+  board: esp32dev
+
+logger:
+api:
+ota:
+  - platform: esphome
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+# Pull in the component from this repo. Adjust `source:` to wherever you keep it.
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [xiaomi_lightbar]
+
+spi:
+  clk_pin: GPIO18
+  miso_pin: GPIO19
+  mosi_pin: GPIO23
+
+xiaomi_lightbar:
+  id: bar_hub
+  cs_pin: GPIO5
+  ce_pin: GPIO4
+
+light:
+  - platform: xiaomi_lightbar
+    id: living_room_bar
+    output_id: living_room_bar_output  # used by the pair button below
+    name: "Living room bar"
+    hub_id: bar_hub
+    # The serial you want to use for this bar. If you pair the bar with the
+    # ESP32, this can be any 24-bit value; if you want to share with the
+    # original remote, set it to that remote's serial (printed in the logs
+    # when you press a button on it).
+    serial: 0xABCDEF
+
+text_sensor:
+  # One entry per physical remote you want to observe. Flash without any
+  # entries first, press a button on the remote, and the unknown serial will
+  # show up in the logs ("RX from unknown serial 0x..."). Put it here.
+  - platform: xiaomi_lightbar
+    name: "Bar remote"
+    hub_id: bar_hub
+    serial: 0x123456
+
+# Optional: a Home Assistant button to issue a pair command (power-cycle the
+# bar first, then press within 10 s).
+button:
+  - platform: template
+    name: "Pair light bar"
+    on_press:
+      - lambda: 'id(living_room_bar_output).send_pair();'
